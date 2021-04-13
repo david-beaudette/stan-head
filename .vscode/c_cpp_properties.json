@@ -4,6 +4,7 @@
         "name": "Linux",
         "includePath": [
           "${workspaceFolder}/src/sermonizer/include/**",
+          "${workspaceFolder}/src/stan-common/include/**",
           "/opt/ros/foxy/include/**"
         ],
         "defines": [],

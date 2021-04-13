@@ -1,18 +1,14 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>sermonizer</name>
-  <version>0.1.1</version>
-  <description>Serial communication driver for Stan head to communicate with Stan base</description>
-  <maintainer email="beaudette.david@gmail.com">David Beaudette</maintainer>
+  <name>stan-common</name>
+  <version>0.1.0</version>
+  <description>Contains common definitions and documentation for Stan design.</description>
+  <maintainer email="beaudette.david@gmail.com">david</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <depend>rclcpp</depend>
-  <depend>std_msgs</depend> 
-  <depend>stan-common</depend> 
-  
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 

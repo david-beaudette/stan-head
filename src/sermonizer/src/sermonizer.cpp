@@ -8,6 +8,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
+#include "stan-common/Base2Head.hpp"
 
 #include <sermonizer/serialib.hpp>
 
