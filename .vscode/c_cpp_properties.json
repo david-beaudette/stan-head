@@ -4,7 +4,6 @@
         "name": "Linux",
         "includePath": [
           "${workspaceFolder}/src/sermonizer/include/**",
-          "${workspaceFolder}/src/turtlesim/include/**",
           "/opt/ros/foxy/include/**"
         ],
         "defines": [],

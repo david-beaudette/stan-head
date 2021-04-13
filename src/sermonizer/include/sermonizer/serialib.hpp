@@ -13,11 +13,13 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 This is a licence-free software, it can be used by anyone who try to build a better world.
+
+Copyright 2019 <Lucidarme> 
 */
 
 
-#ifndef SERIALIB_H
-#define SERIALIB_H
+#ifndef SERMONIZER_SERIALIB_HPP_
+#define SERMONIZER_SERIALIB_HPP_
 
 
 // Used for TimeOut operations
@@ -200,4 +202,4 @@ private:
   struct timeval previousTime;
 };
 
-#endif // serialib_H
+#endif // SERMONIZER_SERIALIB_HPP_
