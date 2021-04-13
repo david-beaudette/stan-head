@@ -13,37 +13,45 @@
 
 using namespace std::chrono_literals;
 
-/* This example creates a subclass of Node and uses std::bind() to register a
- * member function as a callback from the timer. */
-
-class MinimalPublisher : public rclcpp::Node
+class Sermonizer : public rclcpp::Node
 {
   public:
-    MinimalPublisher()
-    : Node("minimal_publisher"), count_(0)
+    Sermonizer()
+    : Node("sermonizer"), count_(0)
     {
       publisher_ = this->create_publisher<std_msgs::msg::String>("topic", 10);
-      timer_ = this->create_wall_timer(
-      500ms, std::bind(&MinimalPublisher::timer_callback, this));
-    }
+      
+      char errorOpening = serial_.openDevice("/dev/ttyUSB0", 115200);
+      if(errorOpening < 1) {
+        RCLCPP_ERROR(this->get_logger(), "Error opening serial port (error code %d)\n", (int)errorOpening);
+      }
 
+      timer_ = this->create_wall_timer(500ms, 
+        std::bind(&Sermonizer::poll_serial, this));
+    }
+    ~Sermonizer() {
+      serial_.closeDevice();
+    }
   private:
-    void timer_callback()
+    void poll_serial()
     {
       auto message = std_msgs::msg::String();
-      message.data = "Hello, world! " + std::to_string(count_++);
+      char serial_buf[1024] = {0};
+      serial_.readString(serial_buf, '\n', 1024, 0U);
+      message.data = "Pkt " + std::to_string(count_++) + ": " + serial_buf;
       RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
       publisher_->publish(message);
     }
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_;
     size_t count_;
+    serialib serial_;
 };
 
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<MinimalPublisher>());
+  rclcpp::spin(std::make_shared<Sermonizer>());
   rclcpp::shutdown();
   return 0;
 }
