@@ -13,7 +13,9 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 
-include_directories(include)
+add_library(stan-common INTERFACE)
+
+target_include_directories(stan-common INTERFACE include/)    
 
 ament_export_include_directories(include)
 

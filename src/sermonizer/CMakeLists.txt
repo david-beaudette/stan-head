@@ -16,7 +16,8 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(stan-common REQUIRED)
 
-include_directories(include/sermonizer
+include_directories(
+  include/sermonizer
   ${stan-common_INCLUDE_DIRS}
 )
 
@@ -24,7 +25,8 @@ add_executable(sermonizer src/sermonizer.cpp src/serialib.cpp)
 
 target_include_directories(sermonizer PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
+  $<INSTALL_INTERFACE:include>
+)
 
 ament_target_dependencies(sermonizer rclcpp std_msgs stan-common)
 

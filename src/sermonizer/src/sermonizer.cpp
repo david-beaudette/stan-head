@@ -8,6 +8,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
+#include "stan-common/Head2Base.hpp"
 #include "stan-common/Base2Head.hpp"
 
 #include <sermonizer/serialib.hpp>
@@ -37,9 +38,9 @@ class Sermonizer : public rclcpp::Node
     void poll_serial()
     {
       auto message = std_msgs::msg::String();
-      char serial_buf[1024] = {0};
-      serial_.readString(serial_buf, '\n', 1024, 0U);
-      message.data = "Pkt " + std::to_string(count_++) + ": " + serial_buf;
+      uint8_t serial_buf[1024] = {0};
+      serial_.readBytes(serial_buf, 1024, 0U);
+      message.data = "Pkt " + std::to_string(count_++);
       RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
       publisher_->publish(message);
     }
