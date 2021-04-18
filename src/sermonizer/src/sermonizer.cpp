@@ -30,7 +30,7 @@ public:
     }
     serial_.flushReceiver();
 
-    timer_ = this->create_wall_timer(500ms,
+    timer_ = this->create_wall_timer(10ms,
                                      std::bind(&Sermonizer::poll_serial, this));
   }
   ~Sermonizer()
@@ -44,7 +44,7 @@ private:
     auto message = std_msgs::msg::String();
     uint8_t serial_buf[1024] = {0};
     int bytes_read = serial_.readBytes(serial_buf,
-                                       1024);
+                                       1024, 1, 50);
     if (bytes_read > 0)
     {
       int idx = 0;
@@ -54,14 +54,24 @@ private:
         {
           // Start of slow packet found
           Base2HeadSlow *msg = (Base2HeadSlow *)&serial_buf[idx];
-          message.data += "Slow pkt seq " + std::to_string(msg->seq) + "; ";
+          message.data += "Slow pkt seq " + std::to_string(msg->seq) +
+                          ", #bytes " + std::to_string(bytes_read) + "; ";
           idx += sizeof(Base2HeadSlow);
         }
         else if (serial_buf[idx] == BASE2HEAD_FOREBYTE_FAST)
         {
+/*           if((bytes_read - idx) < sizeof(Base2HeadFast)) {
+            // Read the remainder of bytes
+            bytes_read += serial_.readBytes(&serial_buf[bytes_read],
+                                            1024 - bytes_read, 1);
+          } */
           // Start of fast packet found
           Base2HeadFast *msg = (Base2HeadFast *)&serial_buf[idx];
-          message.data += "Fast pkt seq " + std::to_string(msg->seq) + "; ";
+          message.data += "Fast pkt seq " + std::to_string(msg->seq) +
+                          ", sizeof (avr) " + std::to_string(msg->cam_tilt_pct) +
+                          ", sizeof (linux) " + std::to_string(sizeof(Base2HeadFast)) +
+                          ", written " + std::to_string(msg->pitch_ref) +
+                          ", #bytes " + std::to_string(bytes_read) + "; ";
           idx += sizeof(Base2HeadFast);
         }
         else
@@ -69,10 +79,20 @@ private:
           ++idx;
         }
       }
+      if (message.data.length() == 0)
+      {
+        message.data = "No fore byte found #bytes " +
+                       std::to_string(bytes_read) +
+                       "; content is [";
+        for (int i = 0; i < bytes_read; ++i)
+        {
+          message.data += std::to_string((int)serial_buf[i]) + ", ";
+        }
+        message.data += "]";
+      }
+      RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
+      publisher_->publish(message);
     }
-
-    RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
-    publisher_->publish(message);
   }
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_;
