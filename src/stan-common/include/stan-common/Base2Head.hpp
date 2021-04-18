@@ -37,4 +37,7 @@ struct Base2HeadFast {
   float w_mes;
 } __attribute__((packed));
 
+const size_t BASE2HEAD_PKT_SIZE_MAX = sizeof(Base2HeadFast) > sizeof(Base2HeadSlow) ? 
+                                      sizeof(Base2HeadFast) : sizeof(Base2HeadSlow);
+
 #endif

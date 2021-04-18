@@ -9,14 +9,12 @@ endif()
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
-
-# find dependencies
+    
 find_package(ament_cmake REQUIRED)
 
-add_library(stan-common INTERFACE)
-
-target_include_directories(stan-common INTERFACE include/)    
-
-ament_export_include_directories(include)
+install(
+  DIRECTORY include/
+  DESTINATION include
+)
 
 ament_package()
