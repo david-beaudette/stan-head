@@ -15,6 +15,7 @@ enum Head2BaseCommandType {
 
 struct Head2BaseCommand {
   uint8_t forebyte;
+  uint8_t seq;
   Head2BaseCommandType type;
   float val1;
   float val2;

@@ -4,8 +4,17 @@
 #define BASE2HEAD_FOREBYTE_SLOW 0xAD
 #define BASE2HEAD_FOREBYTE_FAST 0xAA
 
+const uint8_t BASE_STATUS_PREINIT = 0x00;
+const uint8_t BASE_STATUS_FILTINIT = 0x01;
+const uint8_t BASE_STATUS_RUNNING = 0x02;
+
+const uint8_t BASE_ERR_NONE = 0x00;
+const uint8_t BASE_ERR_SERIAL = 0x01;
+
+
 struct Base2HeadSlow {
   uint8_t forebyte;
+  uint8_t seq;
   uint8_t status;
   float batt_volt;
   float batt_soc;
@@ -14,6 +23,7 @@ struct Base2HeadSlow {
 
 struct Base2HeadFast {
   uint8_t forebyte;
+  uint8_t seq;
   uint8_t status;
   uint32_t acc_count;
   float cam_pan_pct;
