@@ -16,6 +16,7 @@ struct Base2HeadSlow {
   uint8_t forebyte;
   uint8_t seq;
   uint8_t status;
+  uint8_t seq_recv_last;
   float batt_volt;
   float batt_soc;
   float pitch_cmd;
