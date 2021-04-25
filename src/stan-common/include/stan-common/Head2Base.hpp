@@ -20,6 +20,7 @@ struct Head2BaseCommand {
   uint8_t type;
   float val1;
   float val2;
+  uint16_t crc;
 } __attribute__((packed));
 
 #endif

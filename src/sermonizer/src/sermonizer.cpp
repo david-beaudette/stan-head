@@ -9,11 +9,15 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/float32.hpp"
+#include "std_msgs/msg/u_int16.hpp"
 
 #include "stan-common/Head2Base.hpp"
 #include "stan-common/Base2Head.hpp"
+#include "stan-common/fletcher_impl.hpp"
 
 #include <sermonizer/serialib.hpp>
+
+#define SERIAL_BUF_LEN 1024
 
 using namespace std::chrono_literals;
 
@@ -21,58 +25,73 @@ class Sermonizer : public rclcpp::Node
 {
 public:
   Sermonizer()
-      : Node("sermonizer"), count_(0), cmd_seq_prev_i_(255U)
+      : Node("sermonizer"), count_(0),
+        cmd_seq_prev_i_(255U),
+        serial_buf_idx_next_(0U),
+        crc_error_count_fast_ui32_(0U),
+        crc_error_count_slow_ui32_(0U)
   {
     string_pub_ = this->create_publisher<std_msgs::msg::String>("serial_pkt", 10);
     pitch_ref_pub_ = this->create_publisher<std_msgs::msg::Float32>("pitch_ref", 10);
     pitch_est_pub_ = this->create_publisher<std_msgs::msg::Float32>("pitch_est", 10);
+    error_count_pub_ = this->create_publisher<std_msgs::msg::UInt16>("base_error_count", 10);
 
-    pitch_filt_gain_f32_ = this->declare_parameter("pitch_filt_gain", static_cast<double>(0.025));
-    blink_period_f32_ = this->declare_parameter("blink_period_f32", static_cast<double>(0.5));
-    pitch_filt_avg_len_f32_ = this->declare_parameter("pitch_filt_avg_len_f32", static_cast<double>(1.0));
+    pitch_filt_gain_f32_ = this->declare_parameter("pitch_filt_gain",
+                                                   static_cast<double>(0.025));
+    blink_period_f32_ = this->declare_parameter("blink_period_f32",
+                                                static_cast<double>(0.5));
+    pitch_filt_avg_len_f32_ = this->declare_parameter("pitch_filt_avg_len_f32",
+                                                      static_cast<double>(1.0));
 
     auto par_cb =
         [this](const std::vector<rclcpp::Parameter> &parameters)
         -> rcl_interfaces::msg::SetParametersResult {
-
       rcl_interfaces::msg::SetParametersResult result;
       result.successful = false;
+      bool par_found = false;
       for (const auto &parameter : parameters)
       {
         if (parameter.get_name() == "pitch_filt_gain")
         {
+          par_found = true;
           pitch_filt_gain_f32_ = static_cast<float>(parameter.as_double());
-
-          this->SendBaseCommand(InitialiseFilter, pitch_filt_gain_f32_, pitch_filt_avg_len_f32_);
-
-          result.successful = true;
-          result.reason = "Pitch filter gain updated";
-          RCLCPP_INFO(this->get_logger(), "Pitch filter gain changed to %f.", pitch_filt_gain_f32_);
+          RCLCPP_INFO(this->get_logger(), "Pitch filter gain changed to %f.",
+                      pitch_filt_gain_f32_);
+          result.successful = this->SendBaseCommand(InitialiseFilter,
+                                                    pitch_filt_gain_f32_,
+                                                    pitch_filt_avg_len_f32_);
         }
         else if (parameter.get_name() == "pitch_filt_avg_len_f32")
         {
+          par_found = true;
           pitch_filt_avg_len_f32_ = static_cast<float>(parameter.as_double());
-
-          this->SendBaseCommand(InitialiseFilter, pitch_filt_gain_f32_, pitch_filt_avg_len_f32_);
-
-          result.successful = true;
-          result.reason = "Pitch filter averaging length updated";
-          RCLCPP_INFO(this->get_logger(), "Pitch filter averaging length changed to %f.", pitch_filt_avg_len_f32_);
+          RCLCPP_INFO(this->get_logger(), "Pitch filter averaging length changed to %f.",
+                      pitch_filt_avg_len_f32_);
+          result.successful = this->SendBaseCommand(InitialiseFilter,
+                                                    pitch_filt_gain_f32_,
+                                                    pitch_filt_avg_len_f32_);
         }
         else if (parameter.get_name() == "blink_period_f32")
         {
+          par_found = true;
           blink_period_f32_ = static_cast<float>(parameter.as_double());
-
-          this->SendBaseCommand(LedBlinkRate, blink_period_f32_, 0.0f);
-
-          result.successful = true;
-          result.reason = "LED blink period updated";
-          RCLCPP_INFO(this->get_logger(), "LED blink period changed to %f.", blink_period_f32_);
+          RCLCPP_INFO(this->get_logger(), "LED blink period changed to %f.",
+                      blink_period_f32_);
+          result.successful = this->SendBaseCommand(LedBlinkRate,
+                                                    blink_period_f32_,
+                                                    0.0f);
         }
       }
       if (!result.successful)
       {
-        result.reason = "Unknown parameter";
+        if (par_found)
+        {
+          result.reason = "Unknown parameter";
+        }
+        else
+        {
+          result.reason = "Failed to send base command";
+        }
       }
       return result;
     };
@@ -97,36 +116,58 @@ private:
   void poll_serial()
   {
     auto message = std_msgs::msg::String();
-    uint8_t serial_buf[1024] = {0};
-    int bytes_read = serial_.readBytes(serial_buf,
-                                       1024, 1, 50);
+    int bytes_read = serial_.readBytes(&serial_buf_[serial_buf_idx_next_],
+                                       SERIAL_BUF_LEN - serial_buf_idx_next_, 1, 50);
+    serial_buf_idx_next_ = 0;
     if (bytes_read > 0)
     {
       int idx = 0;
       while (idx < bytes_read)
       {
-        if (serial_buf[idx] == BASE2HEAD_FOREBYTE_SLOW)
+        if (serial_buf_[idx] == BASE2HEAD_FOREBYTE_SLOW)
         {
-          // Start of slow packet found
-          Base2HeadSlow *msg = (Base2HeadSlow *)&serial_buf[idx];
-          message.data += "Slow pkt seq " + std::to_string(msg->seq) +
-                          ", last cmd seq " + std::to_string(msg->seq_recv_last) +
-                          ", #bytes " + std::to_string(bytes_read) + "; ";
+          if ((bytes_read - idx) < (int)sizeof(Base2HeadSlow))
+          {
+            serial_buf_idx_next_ = (bytes_read - idx);
+            BufferFall(serial_buf_, &serial_buf_[idx], serial_buf_idx_next_);
+            break;
+          }
+          if (!ParseSlowPacket(&serial_buf_[idx]))
+          {
+            message.data += "Slow !CRC @" + std::to_string(idx) + " (count " +
+                            std::to_string(crc_error_count_slow_ui32_) +
+                            "), read " + std::to_string(bytes_read) + "B; ";
+          }
+          else
+          {
+            message.data += "Slow #" + std::to_string(slow_pkt_last_.seq) +
+                            " @" + std::to_string(idx) +
+                            ", last cmd #" + std::to_string(slow_pkt_last_.seq_recv_last) +
+                            ", read " + std::to_string(bytes_read) + "B; ";
+          }
           idx += sizeof(Base2HeadSlow);
         }
-        else if (serial_buf[idx] == BASE2HEAD_FOREBYTE_FAST)
+        else if (serial_buf_[idx] == BASE2HEAD_FOREBYTE_FAST)
         {
-          // Start of fast packet found
-          Base2HeadFast *pkt = (Base2HeadFast *)&serial_buf[idx];
-          message.data += "Fast pkt seq " + std::to_string(pkt->seq) +
-                          ", #bytes " + std::to_string(bytes_read) + "; ";
+          if ((bytes_read - idx) < (int)sizeof(Base2HeadFast))
+          {
+            serial_buf_idx_next_ = (bytes_read - idx);
+            BufferFall(serial_buf_, &serial_buf_[idx], serial_buf_idx_next_);
+            break;
+          }
+          if (!ParseFastPacket(&serial_buf_[idx]))
+          {
+            message.data += "Fast !CRC @" + std::to_string(idx) + " (count " +
+                            std::to_string(crc_error_count_fast_ui32_) +
+                            "), read " + std::to_string(bytes_read) + "B; ";
+          }
+          else
+          {
+            message.data += "Fast #" + std::to_string(fast_pkt_last_.seq) +
+                            " @" + std::to_string(idx) +
+                            ", read " + std::to_string(bytes_read) + "B; ";
+          }
           idx += sizeof(Base2HeadFast);
-          auto pitch_ref_msg = std_msgs::msg::Float32();
-          auto pitch_est_msg = std_msgs::msg::Float32();
-          pitch_ref_msg.data = pkt->pitch_ref;
-          pitch_est_msg.data = pkt->pitch_est;
-          pitch_ref_pub_->publish(pitch_ref_msg);
-          pitch_est_pub_->publish(pitch_est_msg);
         }
         else
         {
@@ -135,43 +176,102 @@ private:
       }
       if (message.data.length() == 0)
       {
-        message.data = "No fore byte found #bytes " +
+        message.data = "Incomplete " +
                        std::to_string(bytes_read) +
-                       "; content is [";
-        for (int i = 0; i < bytes_read; ++i)
-        {
-          message.data += std::to_string((int)serial_buf[i]) + ", ";
-        }
-        message.data += "]";
+                       "B";
       }
       RCLCPP_DEBUG(this->get_logger(), "Publishing: '%s'", message.data.c_str());
       string_pub_->publish(message);
     }
   }
+  /** @brief Move buffer bytes to start of buffer **/
+  void BufferFall(uint8_t *bottom, const uint8_t *top, size_t len)
+  {
+    for (size_t idx = 0; idx < len; ++idx)
+    {
+      bottom[idx] = top[idx];
+    }
+  }
+
+  /** @brief Parse slow packet **/
+  bool ParseSlowPacket(const uint8_t *buf)
+  {
+    // Start of slow packet found
+    Base2HeadSlow *pkt = (Base2HeadSlow *)buf;
+    uint16_t crc = compute_fletcher16((uint8_t *)pkt,
+                                      sizeof(Base2HeadSlow) -
+                                          sizeof(Base2HeadSlow::crc));
+    if (crc != pkt->crc)
+    {
+      ++crc_error_count_slow_ui32_;
+      return false;
+    }
+    else
+    {
+      memcpy(&slow_pkt_last_, buf, sizeof(Base2HeadSlow));
+      auto error_count_msg = std_msgs::msg::UInt16();
+      error_count_msg.data = pkt->crc_error_count;
+      error_count_pub_->publish(error_count_msg);
+      return true;
+    }
+  }
+
+  /** @brief Parse fast packet **/
+  bool ParseFastPacket(const uint8_t *buf)
+  {
+    // Start of fast packet found
+    Base2HeadFast *pkt = (Base2HeadFast *)buf;
+    uint16_t crc = compute_fletcher16((uint8_t *)pkt,
+                                      sizeof(Base2HeadFast) -
+                                          sizeof(Base2HeadFast::crc));
+    if (crc != pkt->crc)
+    {
+      ++crc_error_count_fast_ui32_;
+      return false;
+    }
+    else
+    {
+      memcpy(&fast_pkt_last_, buf, sizeof(Base2HeadFast));
+      auto pitch_ref_msg = std_msgs::msg::Float32();
+      auto pitch_est_msg = std_msgs::msg::Float32();
+      pitch_ref_msg.data = pkt->pitch_ref;
+      pitch_est_msg.data = pkt->pitch_est;
+      pitch_ref_pub_->publish(pitch_ref_msg);
+      pitch_est_pub_->publish(pitch_est_msg);
+      return true;
+    }
+  }
+
   /** @brief Send base command on serial port **/
   bool SendBaseCommand(Head2BaseCommandType type, float val1, float val2)
   {
     Head2BaseCommand cmd;
     cmd.forebyte = HEAD2BASE_FOREBYTE_CMD;
-    if(cmd_seq_prev_i_ == UINT8_MAX) {
+    if (cmd_seq_prev_i_ == UINT8_MAX)
+    {
       cmd_seq_prev_i_ = 0U;
     }
-    else {
+    else
+    {
       ++cmd_seq_prev_i_;
     }
     cmd.seq = cmd_seq_prev_i_;
     cmd.type = (uint8_t)type;
     cmd.val1 = val1;
     cmd.val2 = val2;
+    cmd.crc = compute_fletcher16((uint8_t *)&cmd,
+                                 sizeof(Head2BaseCommand) -
+                                     sizeof(Head2BaseCommand::crc));
 
     RCLCPP_INFO(this->get_logger(), "Sent command type %d with seq %d", (int)cmd.type, (int)cmd.seq);
-    return (serial_.writeBytes((uint8_t*)&cmd, sizeof(Head2BaseCommand)) >= 0);
+    return (serial_.writeBytes((uint8_t *)&cmd, sizeof(Head2BaseCommand)) >= 0);
   }
 
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr string_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pitch_ref_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pitch_est_pub_;
+  rclcpp::Publisher<std_msgs::msg::UInt16>::SharedPtr error_count_pub_;
   rclcpp::Node::OnSetParametersCallbackHandle::SharedPtr par_cb_hdl_;
   size_t count_;
   serialib serial_;
@@ -179,6 +279,12 @@ private:
   float blink_period_f32_;
   float pitch_filt_avg_len_f32_;
   uint8_t cmd_seq_prev_i_;
+  uint8_t serial_buf_[SERIAL_BUF_LEN];
+  size_t serial_buf_idx_next_;
+  uint32_t crc_error_count_fast_ui32_;
+  uint32_t crc_error_count_slow_ui32_;
+  Base2HeadSlow slow_pkt_last_;
+  Base2HeadFast fast_pkt_last_;
 };
 
 int main(int argc, char *argv[])
