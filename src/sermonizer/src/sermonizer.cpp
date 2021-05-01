@@ -34,6 +34,8 @@ public:
     string_pub_ = this->create_publisher<std_msgs::msg::String>("serial_pkt", 10);
     pitch_ref_pub_ = this->create_publisher<std_msgs::msg::Float32>("pitch_ref", 10);
     pitch_est_pub_ = this->create_publisher<std_msgs::msg::Float32>("pitch_est", 10);
+    speed_cmd_pub_ = this->create_publisher<std_msgs::msg::Float32>("speed_cmd", 10);
+    batt_soc_pub_ = this->create_publisher<std_msgs::msg::Float32>("batt_soc_est", 10);
     error_count_pub_ = this->create_publisher<std_msgs::msg::UInt16>("base_error_count", 10);
 
     pitch_filt_gain_f32_ = this->declare_parameter("pitch_filt_gain",
@@ -212,6 +214,11 @@ private:
       auto error_count_msg = std_msgs::msg::UInt16();
       error_count_msg.data = pkt->crc_error_count;
       error_count_pub_->publish(error_count_msg);
+
+      auto batt_soc_msg = std_msgs::msg::Float32();
+      batt_soc_msg.data = pkt->batt_soc;
+      batt_soc_pub_->publish(batt_soc_msg);
+
       return true;
     }
   }
@@ -234,10 +241,13 @@ private:
       memcpy(&fast_pkt_last_, buf, sizeof(Base2HeadFast));
       auto pitch_ref_msg = std_msgs::msg::Float32();
       auto pitch_est_msg = std_msgs::msg::Float32();
+      auto speed_cmd_msg = std_msgs::msg::Float32();
       pitch_ref_msg.data = pkt->pitch_ref;
       pitch_est_msg.data = pkt->pitch_est;
+      speed_cmd_msg.data = pkt->speed_cmd[0];
       pitch_ref_pub_->publish(pitch_ref_msg);
       pitch_est_pub_->publish(pitch_est_msg);
+      speed_cmd_pub_->publish(speed_cmd_msg);
       return true;
     }
   }
@@ -271,6 +281,8 @@ private:
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr string_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pitch_ref_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pitch_est_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr speed_cmd_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr batt_soc_pub_;
   rclcpp::Publisher<std_msgs::msg::UInt16>::SharedPtr error_count_pub_;
   rclcpp::Node::OnSetParametersCallbackHandle::SharedPtr par_cb_hdl_;
   size_t count_;
