@@ -6,7 +6,9 @@
 #include <memory>
 #include <string>
 
-#include "rclcpp/rclcpp.hpp"
+#include <diagnostic_updater/diagnostic_updater.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/joy.hpp>
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/float32.hpp"
 #include "std_msgs/msg/u_int16.hpp"
@@ -20,6 +22,7 @@
 #define SERIAL_BUF_LEN 1024
 
 using namespace std::chrono_literals;
+using std::placeholders::_1;
 
 class Sermonizer : public rclcpp::Node
 {
@@ -32,11 +35,11 @@ public:
         crc_error_count_slow_ui32_(0U)
   {
     string_pub_ = this->create_publisher<std_msgs::msg::String>("serial_pkt", 10);
-    pitch_ref_pub_ = this->create_publisher<std_msgs::msg::Float32>("pitch_ref", 10);
+    pitch_cmd_pub_ = this->create_publisher<std_msgs::msg::Float32>("pitch_cmd", 10);
     pitch_est_pub_ = this->create_publisher<std_msgs::msg::Float32>("pitch_est", 10);
     speed_cmd_pub_ = this->create_publisher<std_msgs::msg::Float32>("speed_cmd", 10);
-    batt_soc_pub_ = this->create_publisher<std_msgs::msg::Float32>("batt_soc_est", 10);
-    error_count_pub_ = this->create_publisher<std_msgs::msg::UInt16>("base_error_count", 10);
+    joy_sub_ = this->create_subscription<sensor_msgs::msg::Joy>(
+        "joy", 50, std::bind(&Sermonizer::joy_msg_cb, this, _1));
 
     pitch_filt_gain_f32_ = this->declare_parameter("pitch_filt_gain",
                                                    static_cast<double>(0.025));
@@ -44,6 +47,12 @@ public:
                                                 static_cast<double>(0.5));
     pitch_filt_avg_len_f32_ = this->declare_parameter("pitch_filt_avg_len_f32",
                                                       static_cast<double>(1.0));
+    serial_dev_ = this->declare_parameter("dev", std::string("/dev/ttyUSB0"));
+
+    diagnostic_ = std::make_shared<diagnostic_updater::Updater>(this);
+    diagnostic_->add("Stan Base Status", this, &Sermonizer::diagnostics);
+    diagnostic_->setHardwareID("arduino_nano_serial");
+    lastDiagTime_ = this->now().seconds();
 
     auto par_cb =
         [this](const std::vector<rclcpp::Parameter> &parameters)
@@ -99,15 +108,20 @@ public:
     };
     par_cb_hdl_ = this->add_on_set_parameters_callback(par_cb);
 
-    char ser_open_err = serial_.openDevice("/dev/ttyUSB0", 115200);
+    char ser_open_err = serial_.openDevice(serial_dev_.c_str(), 115200);
     if (ser_open_err < 1)
     {
       RCLCPP_ERROR(this->get_logger(), "Error opening serial port (error code %d)\n", (int)ser_open_err);
+      opened_ = false;
     }
-    serial_.flushReceiver();
+    else
+    {
+      serial_.flushReceiver();
 
-    timer_ = this->create_wall_timer(10ms,
-                                     std::bind(&Sermonizer::poll_serial, this));
+      timer_ = this->create_wall_timer(10ms,
+                                       std::bind(&Sermonizer::poll_serial, this));
+      opened_ = true;
+    }
   }
   ~Sermonizer()
   {
@@ -120,6 +134,7 @@ private:
     auto message = std_msgs::msg::String();
     int bytes_read = serial_.readBytes(&serial_buf_[serial_buf_idx_next_],
                                        SERIAL_BUF_LEN - serial_buf_idx_next_, 1, 50);
+    bytes_read += serial_buf_idx_next_;
     serial_buf_idx_next_ = 0;
     if (bytes_read > 0)
     {
@@ -132,17 +147,20 @@ private:
           {
             serial_buf_idx_next_ = (bytes_read - idx);
             BufferFall(serial_buf_, &serial_buf_[idx], serial_buf_idx_next_);
+            message.data += "--Slow-- remain " + std::to_string(serial_buf_idx_next_) +
+                            "B @" + std::to_string(idx) +
+                            ", read " + std::to_string(bytes_read) + "B; ";
             break;
           }
           if (!ParseSlowPacket(&serial_buf_[idx]))
           {
-            message.data += "Slow !CRC @" + std::to_string(idx) + " (count " +
+            message.data += "--Slow-- !CRC @" + std::to_string(idx) + " (count " +
                             std::to_string(crc_error_count_slow_ui32_) +
                             "), read " + std::to_string(bytes_read) + "B; ";
           }
           else
           {
-            message.data += "Slow #" + std::to_string(slow_pkt_last_.seq) +
+            message.data += "--Slow-- #" + std::to_string(slow_pkt_last_.seq) +
                             " @" + std::to_string(idx) +
                             ", last cmd #" + std::to_string(slow_pkt_last_.seq_recv_last) +
                             ", read " + std::to_string(bytes_read) + "B; ";
@@ -155,6 +173,9 @@ private:
           {
             serial_buf_idx_next_ = (bytes_read - idx);
             BufferFall(serial_buf_, &serial_buf_[idx], serial_buf_idx_next_);
+            message.data += "Fast remain " + std::to_string(serial_buf_idx_next_) +
+                            "B @" + std::to_string(idx) +
+                            ", read " + std::to_string(bytes_read) + "B; ";
             break;
           }
           if (!ParseFastPacket(&serial_buf_[idx]))
@@ -211,14 +232,6 @@ private:
     else
     {
       memcpy(&slow_pkt_last_, buf, sizeof(Base2HeadSlow));
-      auto error_count_msg = std_msgs::msg::UInt16();
-      error_count_msg.data = pkt->crc_error_count;
-      error_count_pub_->publish(error_count_msg);
-
-      auto batt_soc_msg = std_msgs::msg::Float32();
-      batt_soc_msg.data = pkt->batt_soc;
-      batt_soc_pub_->publish(batt_soc_msg);
-
       return true;
     }
   }
@@ -239,13 +252,13 @@ private:
     else
     {
       memcpy(&fast_pkt_last_, buf, sizeof(Base2HeadFast));
-      auto pitch_ref_msg = std_msgs::msg::Float32();
+      auto pitch_cmd_msg = std_msgs::msg::Float32();
       auto pitch_est_msg = std_msgs::msg::Float32();
       auto speed_cmd_msg = std_msgs::msg::Float32();
-      pitch_ref_msg.data = pkt->pitch_ref;
+      pitch_cmd_msg.data = pkt->pitch_cmd;
       pitch_est_msg.data = pkt->pitch_est;
       speed_cmd_msg.data = pkt->speed_cmd[0];
-      pitch_ref_pub_->publish(pitch_ref_msg);
+      pitch_cmd_pub_->publish(pitch_cmd_msg);
       pitch_est_pub_->publish(pitch_est_msg);
       speed_cmd_pub_->publish(speed_cmd_msg);
       return true;
@@ -276,16 +289,55 @@ private:
     RCLCPP_INFO(this->get_logger(), "Sent command type %d with seq %d", (int)cmd.type, (int)cmd.seq);
     return (serial_.writeBytes((uint8_t *)&cmd, sizeof(Head2BaseCommand)) >= 0);
   }
+  /** @brief Publishes diagnostics and status **/
+  void diagnostics(diagnostic_updater::DiagnosticStatusWrapper &stat)
+  {
+    double now = this->now().seconds();
+    //double interval = now - lastDiagTime_;
+    /*  byte OK=0
+        byte WARN=1
+        byte ERROR=2
+        byte STALE=3 */
+    if (opened_)
+    {
+      stat.summary(0, "OK");
+    }
+    else
+    {
+      stat.summary(2, "Unable to open serial port");
+    }
 
+    stat.add("device", serial_dev_);
+    stat.add("base error count", slow_pkt_last_.crc_error_count);
+    stat.add("fast packet parsing error count", crc_error_count_fast_ui32_);
+    stat.add("fast packet size", (int)sizeof(Base2HeadFast));
+    stat.add("slow packet parsing error count", crc_error_count_slow_ui32_);
+    stat.add("slow packet size", (int)sizeof(Base2HeadSlow));
+    stat.add("battery level (%)", slow_pkt_last_.batt_soc);
+    stat.add("equilibrium pitch (deg)", slow_pkt_last_.pitch_zero);
+    stat.add("pitch control P gain", slow_pkt_last_.pitch_ctl_gain_P);
+    stat.add("pitch control I gain", slow_pkt_last_.pitch_ctl_gain_I);
+    stat.add("pitch control D gain", slow_pkt_last_.pitch_ctl_gain_D);
+    lastDiagTime_ = now;
+  }
+  void joy_msg_cb(const sensor_msgs::msg::Joy::SharedPtr msg) const
+  {
+    return;
+  }
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr string_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pitch_ref_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pitch_cmd_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pitch_est_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr speed_cmd_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr batt_soc_pub_;
-  rclcpp::Publisher<std_msgs::msg::UInt16>::SharedPtr error_count_pub_;
+  rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
   rclcpp::Node::OnSetParametersCallbackHandle::SharedPtr par_cb_hdl_;
+
+  std::shared_ptr<diagnostic_updater::Updater> diagnostic_;
+
   size_t count_;
+  std::string serial_dev_;
+  bool opened_;
+  double lastDiagTime_;
   serialib serial_;
   float pitch_filt_gain_f32_;
   float blink_period_f32_;

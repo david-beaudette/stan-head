@@ -14,4 +14,15 @@ def generate_launch_description():
             executable='rqt_gui',
             name='head_ui',
         ),
+        Node(
+            package='joy_linux',
+            executable='joy_linux_node',
+            name='joystick_receiver',
+            parameters=[
+                {"dev_ff": ""},
+                {"dev": "/dev/input/js0"},
+                {"deadzone": 0.05},
+                {"coalesce_interval": 0.05},
+            ],
+        ),
     ])

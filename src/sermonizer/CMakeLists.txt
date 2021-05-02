@@ -12,8 +12,11 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
+find_package(diagnostic_updater REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 include_directories(
   include/sermonizer
@@ -22,7 +25,13 @@ include_directories(
 
 add_executable(sermonizer src/sermonizer.cpp src/serialib.cpp)
 
-ament_target_dependencies(sermonizer rclcpp std_msgs)
+ament_target_dependencies(sermonizer 
+  "diagnostic_msgs"
+  "diagnostic_updater"
+  "rclcpp"
+  "std_msgs"
+  "sensor_msgs"
+)
 
 target_include_directories(sermonizer PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
