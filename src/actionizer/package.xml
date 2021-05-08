@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>sermonizer</name>
+  <name>actionizer</name>
   <version>0.1.1</version>
-  <description>Serial communication driver for Stan head to communicate with Stan base</description>
+  <description>Nodes that make Stan do something</description>
   <maintainer email="beaudette.david@gmail.com">David Beaudette</maintainer>
   <license>MIT</license>
 
@@ -11,6 +11,7 @@
 
   <depend>rclcpp</depend>
   <depend>std_msgs</depend> 
+  <depend>sensor_msgs</depend> 
   <depend>stan_common</depend> 
   
   <test_depend>ament_lint_auto</test_depend>

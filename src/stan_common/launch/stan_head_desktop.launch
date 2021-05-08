@@ -15,6 +15,11 @@ def generate_launch_description():
             name='head_ui',
         ),
         Node(
+            package='actionizer',
+            executable='joy_actionizer',
+            name='joy_actionizer',
+        ),
+        Node(
             package='joy_linux',
             executable='joy_linux_node',
             name='joystick_receiver',

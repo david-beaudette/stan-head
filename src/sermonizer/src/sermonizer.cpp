@@ -8,14 +8,15 @@
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/joy.hpp>
-#include "std_msgs/msg/string.hpp"
-#include "std_msgs/msg/float32.hpp"
-#include "std_msgs/msg/u_int16.hpp"
+#include <std_msgs/msg/string.hpp>
+#include <std_msgs/msg/float32.hpp>
+#include <std_msgs/msg/u_int16.hpp>
 
-#include "stan_common/Head2Base.hpp"
-#include "stan_common/Base2Head.hpp"
-#include "stan_common/fletcher_impl.hpp"
+#include <stan_common/Head2Base.hpp>
+#include <stan_common/Base2Head.hpp>
+#include <stan_common/fletcher_impl.hpp>
+
+#include <stan_common/msg/stan_base_command.hpp>
 
 #include <sermonizer/serialib.hpp>
 
@@ -38,8 +39,6 @@ public:
     pitch_cmd_pub_ = this->create_publisher<std_msgs::msg::Float32>("pitch_cmd", 10);
     pitch_est_pub_ = this->create_publisher<std_msgs::msg::Float32>("pitch_est", 10);
     speed_cmd_pub_ = this->create_publisher<std_msgs::msg::Float32>("speed_cmd", 10);
-    joy_sub_ = this->create_subscription<sensor_msgs::msg::Joy>(
-        "joy", 50, std::bind(&Sermonizer::joy_msg_cb, this, _1));
 
     pitch_filt_gain_f32_ = this->declare_parameter("pitch_filt_gain",
                                                    static_cast<double>(0.025));
@@ -320,17 +319,12 @@ private:
     stat.add("pitch control D gain", slow_pkt_last_.pitch_ctl_gain_D);
     lastDiagTime_ = now;
   }
-  void joy_msg_cb(const sensor_msgs::msg::Joy::SharedPtr msg) const
-  {
-    printf("Got message %d.\n", msg->buttons[0]);
-    return;
-  }
+
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr string_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pitch_cmd_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pitch_est_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr speed_cmd_pub_;
-  rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
   rclcpp::Node::OnSetParametersCallbackHandle::SharedPtr par_cb_hdl_;
 
   std::shared_ptr<diagnostic_updater::Updater> diagnostic_;
