@@ -48,6 +48,9 @@ public:
                                                       static_cast<double>(1.0));
     serial_dev_ = this->declare_parameter("dev", std::string("/dev/ttyUSB0"));
 
+    base_cmd_sub_ = this->create_subscription<stan_common::msg::StanBaseCommand>(
+        "base_command", 50, std::bind(&Sermonizer::base_cmd_msg_cb, this, _1));
+
     diagnostic_ = std::make_shared<diagnostic_updater::Updater>(this);
     diagnostic_->add("Stan Base Status", this, &Sermonizer::diagnostics);
     diagnostic_->setHardwareID("arduino_nano_serial");
@@ -320,11 +323,18 @@ private:
     lastDiagTime_ = now;
   }
 
+  void base_cmd_msg_cb(const stan_common::msg::StanBaseCommand::SharedPtr msg) const
+  {
+    printf("Got command type %d.\n", msg->type);
+    return;
+  }
+
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr string_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pitch_cmd_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pitch_est_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr speed_cmd_pub_;
+  rclcpp::Subscription<stan_common::msg::StanBaseCommand>::SharedPtr base_cmd_sub_;
   rclcpp::Node::OnSetParametersCallbackHandle::SharedPtr par_cb_hdl_;
 
   std::shared_ptr<diagnostic_updater::Updater> diagnostic_;
