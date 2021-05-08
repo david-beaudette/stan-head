@@ -14,6 +14,7 @@ enum Head2BaseCommandType {
   SetSpeed,          // val1 = speed (m/s)
   SetTurnRate,       // val1 = turn rate (deg/s)
   LedBlinkRate,      // val1 = blink period (s)
+  SetRunningState,   // val1 = 0 to disable control and motors, 1 to enable
 };
 
 

@@ -6,7 +6,8 @@
 
 const uint8_t BASE_STATUS_PREINIT = 0x00;
 const uint8_t BASE_STATUS_FILTINIT = 0x01;
-const uint8_t BASE_STATUS_RUNNING = 0x02;
+const uint8_t BASE_STATUS_MOTOR_OFF = 0x02;
+const uint8_t BASE_STATUS_RUNNING = 0x04;
 
 const uint8_t BASE_ERR_NONE = 0x00;
 const uint8_t BASE_ERR_SERIAL = 0x01;

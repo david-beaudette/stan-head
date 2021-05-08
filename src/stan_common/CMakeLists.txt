@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(stan-common)
+project(stan_common)
 
 # Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
@@ -11,6 +11,11 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
     
 find_package(ament_cmake REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/StanBaseCommand.msg"
+)
 
 install(
   DIRECTORY include/

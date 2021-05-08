@@ -13,9 +13,9 @@
 #include "std_msgs/msg/float32.hpp"
 #include "std_msgs/msg/u_int16.hpp"
 
-#include "stan-common/Head2Base.hpp"
-#include "stan-common/Base2Head.hpp"
-#include "stan-common/fletcher_impl.hpp"
+#include "stan_common/Head2Base.hpp"
+#include "stan_common/Base2Head.hpp"
+#include "stan_common/fletcher_impl.hpp"
 
 #include <sermonizer/serialib.hpp>
 
@@ -322,6 +322,7 @@ private:
   }
   void joy_msg_cb(const sensor_msgs::msg::Joy::SharedPtr msg) const
   {
+    printf("Got message %d.\n", msg->buttons[0]);
     return;
   }
   rclcpp::TimerBase::SharedPtr timer_;
