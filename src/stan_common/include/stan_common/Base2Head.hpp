@@ -21,6 +21,7 @@ struct Base2HeadSlow {
   float batt_volt;
   float batt_soc;
   float pitch_zero;
+  float pitch_filter_gain;
   float pitch_ctl_gain_P;
   float pitch_ctl_gain_I;
   float pitch_ctl_gain_D;
