@@ -317,6 +317,7 @@ private:
     stat.add("slow packet size", (int)sizeof(Base2HeadSlow));
     stat.add("battery level (%)", slow_pkt_last_.batt_soc);
     stat.add("equilibrium pitch (deg)", slow_pkt_last_.pitch_zero);
+    stat.add("pitch filter gain", slow_pkt_last_.pitch_filter_gain);
     stat.add("pitch control P gain", slow_pkt_last_.pitch_ctl_gain_P);
     stat.add("pitch control I gain", slow_pkt_last_.pitch_ctl_gain_I);
     stat.add("pitch control D gain", slow_pkt_last_.pitch_ctl_gain_D);

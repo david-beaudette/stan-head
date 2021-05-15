@@ -5,12 +5,12 @@
 
 enum Head2BaseCommandType {
   InitialiseFilter,  // val1 = acc_coeff (0-1), val2 = avg_len (s)
-  TunePitchControl1, // val1 = P gain, val2 = I gain
-  TunePitchControl2, // val1 = D gain
+  TunePitchControl1, // val1 = P gain increment, val2 = I gain increment
+  TunePitchControl2, // val1 = D gain increment
   PanTiltAbsCamera,  // val1 = pan (deg), val2 = tilt (deg)
   PanTiltRelCamera,  // val1 = pan (deg), val2 = tilt (deg)
   LevelCamera,       // val1 = pan (deg)
-  SetZeroPitch,      // val1 = equilibrium pitch value (deg)
+  TuneZeroPitch,      // val1 = equilibrium pitch increment (deg)
   SetSpeed,          // val1 = speed (m/s)
   SetTurnRate,       // val1 = turn rate (deg/s)
   LedBlinkRate,      // val1 = blink period (s)
