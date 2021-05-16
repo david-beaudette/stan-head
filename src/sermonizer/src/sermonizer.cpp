@@ -268,7 +268,7 @@ private:
   }
 
   /** @brief Send base command on serial port **/
-  bool SendBaseCommand(Head2BaseCommandType type, float val1, float val2)
+  bool SendBaseCommand(const Head2BaseCommandType type, const float val1, const float val2)
   {
     Head2BaseCommand cmd;
     cmd.forebyte = HEAD2BASE_FOREBYTE_CMD;
@@ -288,7 +288,6 @@ private:
                                  sizeof(Head2BaseCommand) -
                                      sizeof(Head2BaseCommand::crc));
 
-    RCLCPP_INFO(this->get_logger(), "Sent command type %d with seq %d", (int)cmd.type, (int)cmd.seq);
     return (serial_.writeBytes((uint8_t *)&cmd, sizeof(Head2BaseCommand)) >= 0);
   }
   /** @brief Publishes diagnostics and status **/
@@ -309,24 +308,28 @@ private:
       stat.summary(2, "Unable to open serial port");
     }
 
-    stat.add("device", serial_dev_);
-    stat.add("base error count", slow_pkt_last_.crc_error_count);
-    stat.add("fast packet parsing error count", crc_error_count_fast_ui32_);
-    stat.add("fast packet size", (int)sizeof(Base2HeadFast));
-    stat.add("slow packet parsing error count", crc_error_count_slow_ui32_);
-    stat.add("slow packet size", (int)sizeof(Base2HeadSlow));
     stat.add("battery level (%)", slow_pkt_last_.batt_soc);
     stat.add("equilibrium pitch (deg)", slow_pkt_last_.pitch_zero);
     stat.add("pitch filter gain", slow_pkt_last_.pitch_filter_gain);
     stat.add("pitch control P gain", slow_pkt_last_.pitch_ctl_gain_P);
     stat.add("pitch control I gain", slow_pkt_last_.pitch_ctl_gain_I);
     stat.add("pitch control D gain", slow_pkt_last_.pitch_ctl_gain_D);
+    stat.add("system status", slow_pkt_last_.status & 0x0F);
+    stat.add("system error code", (slow_pkt_last_.status & 0xF0) >> 4);
+    stat.add("base error count", slow_pkt_last_.crc_error_count);
+    stat.add("fast packet parsing error count", crc_error_count_fast_ui32_);
+    stat.add("fast packet size", (int)sizeof(Base2HeadFast));
+    stat.add("slow packet parsing error count", crc_error_count_slow_ui32_);
+    stat.add("slow packet size", (int)sizeof(Base2HeadSlow));
+    stat.add("device", serial_dev_);
     lastDiagTime_ = now;
   }
 
-  void base_cmd_msg_cb(const stan_common::msg::StanBaseCommand::SharedPtr msg) const
+  void base_cmd_msg_cb(const stan_common::msg::StanBaseCommand::SharedPtr msg)
   {
-    printf("Got command type %d.\n", msg->type);
+    this->SendBaseCommand(static_cast<Head2BaseCommandType>(msg->type),
+                          msg->val1,
+                          msg->val2);
     return;
   }
 

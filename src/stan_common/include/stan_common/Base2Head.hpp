@@ -11,6 +11,7 @@ const uint8_t BASE_STATUS_RUNNING = 0x04;
 
 const uint8_t BASE_ERR_NONE = 0x00;
 const uint8_t BASE_ERR_SERIAL = 0x01;
+const uint8_t BASE_ERR_LOW_BAT = 0x02;
 
 
 struct Base2HeadSlow {
