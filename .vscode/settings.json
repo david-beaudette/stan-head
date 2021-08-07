@@ -72,5 +72,8 @@
   "python.autoComplete.extraPaths": [
     "/opt/ros/foxy/lib/python3.8/site-packages"
   ],
-  "ros.distro": "foxy"
+  "ros.distro": "galactic",
+  "python.analysis.extraPaths": [
+    "/opt/ros/foxy/lib/python3.8/site-packages"
+  ]
 }

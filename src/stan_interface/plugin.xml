@@ -1,0 +1,20 @@
+   1 <library path="src">
+   2   <class name="StanUI" type="rqt_stanui.stanui.StanUI" base_class_type="rqt_gui_py::Plugin">
+   3     <description>
+   4       Stan user interface.
+   5     </description>
+   6     <qtgui>
+   7       <!-- optional grouping...
+   8       <group>
+   9         <label>Group</label>
+  10       </group>
+  11       <group>
+  12         <label>Subgroup</label>
+  13       </group>
+  14       -->
+  15       <label>Stan User Interface</label>
+  16       <icon type="theme">system-help</icon>
+  17       <statustip>Stan user interface to run on a desktop.</statustip>
+  18     </qtgui>
+  19   </class>
+  20 </library>
