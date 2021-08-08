@@ -1,5 +1,5 @@
-<library path="src">
-  <class name="StanUI" type="rqt_stanui.stanui.StanUI" base_class_type="rqt_gui_py::Plugin">
+<library path="stan_if">
+  <class name="StanUI" type="stan_if.rqt_stan_if.StanUI" base_class_type="rqt_gui_py::Plugin">
     <description>
       Stan user interface.
     </description>

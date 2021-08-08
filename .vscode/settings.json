@@ -70,10 +70,12 @@
     "variant": "cpp"
   },
   "python.autoComplete.extraPaths": [
-    "/opt/ros/foxy/lib/python3.8/site-packages"
+    "/opt/ros/galactic/lib/python3.8/site-packages",
+    "~/.local/lib/python3.8/site-packages"
   ],
   "ros.distro": "galactic",
   "python.analysis.extraPaths": [
-    "/opt/ros/foxy/lib/python3.8/site-packages"
+    "/opt/ros/galactic/lib/python3.8/site-packages",
+    "~/.local/lib/python3.8/site-packages"
   ]
 }

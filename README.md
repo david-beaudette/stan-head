@@ -18,3 +18,7 @@ sudo apt update && sudo apt install -y \
   python3-setuptools \
   python3-vcstool \
   wget
+
+- Qt bindings
+cd /usr/bin
+pip install PySide2
