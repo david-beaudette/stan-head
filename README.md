@@ -35,6 +35,14 @@ sudo apt update
 sudo apt upgrade
 
 - Image stuff for RPi camera
-cd ~/schnitzes/stan-head
+mkdir -p ~/schnitzes/ros2_ws/src
+cd ~/schnitzes/ros2_ws/src
+
+git clone --branch foxy https://gitlab.com/boldhearts/ros2_v4l2_camera.git
+git clone --branch ros2 https://github.com/ros-perception/vision_opencv.git
+git clone --branch ros2 https://github.com/ros-perception/image_common.git
+git clone --branch ros2 https://github.com/ros-perception/image_transport_plugins.git
+cd ..
+
 rosdep init
 rosdep install --from-paths src -r -y
