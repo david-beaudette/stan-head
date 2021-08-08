@@ -19,6 +19,22 @@ sudo apt update && sudo apt install -y \
   python3-vcstool \
   wget
 
-- Qt bindings
+- Qt bindings (not sure if required)
 cd /usr/bin
 pip install PySide2
+
+- On the RPi only
+sudo nano /boot/firmware/config.txt
+At the end of the file, add:
+start_x = 1
+Ctrl+o to save
+Ctrl+x to exit
+sudo reboot now
+(wait)
+sudo apt update
+sudo apt upgrade
+
+- Image stuff for RPi camera
+cd ~/schnitzes/stan-head
+rosdep init
+rosdep install --from-paths src -r -y
