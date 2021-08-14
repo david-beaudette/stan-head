@@ -8,7 +8,7 @@
       "label": "build",
       "detail": "Build workspace (default)",
       "type": "shell",
-      "command": "colcon build --merge-install --cmake-args '-DCMAKE_BUILD_TYPE=RelWithDebInfo' -Wall -Wextra -Wpedantic",
+      "command": "catkin_make install --source stan-head/src",
       "group": {
         "kind": "build",
         "isDefault": true
@@ -71,7 +71,7 @@
       "label": "Launch UI",
       "detail": "Launches the ROS nodes to operate Stan from a desktop computer",
       "type": "shell",
-      "command": "source install/local_setup.sh; ros2 launch stan_common stan_desktop_interface.launch",
+      "command": "source install/local_setup.sh; ros2 launch stan_common stan_head_desktop.launch",
       "group": "none",
       "problemMatcher": "$gcc",
       "options": {

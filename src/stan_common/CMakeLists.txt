@@ -1,29 +1,33 @@
 cmake_minimum_required(VERSION 3.5)
 project(stan_common)
 
-# Default to C++14
-if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 14)
-endif()
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
-endif()
-    
-find_package(ament_cmake REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
-
-rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/StanBaseCommand.msg"
+find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  rospy
+  diagnostic_updater
+  std_msgs
+  message_generation
 )
 
-install(
-  DIRECTORY include/
-  DESTINATION include
-)
-install(
-  DIRECTORY launch
-  DESTINATION share/${PROJECT_NAME}/
+add_message_files(
+  FILES
+  StanBaseCommand.msg
 )
 
-ament_package()
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
+
+catkin_package(
+  INCLUDE_DIRS 
+  include
+  CATKIN_DEPENDS 
+  message_runtime
+)
+
+add_library(${PROJECT_NAME} INTERFACE)
+target_include_directories(${PROJECT_NAME} INTERFACE include)

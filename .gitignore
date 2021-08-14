@@ -1,4 +1,4 @@
 build/
-log/
+devel/
 install/
-src/turtlesim/
+log/

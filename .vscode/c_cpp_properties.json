@@ -5,7 +5,7 @@
         "includePath": [
           "${workspaceFolder}/src/sermonizer/include/**",
           "${workspaceFolder}/../install/include/**",
-          "/opt/ros/galactic/include/**"
+          "/opt/ros/noetic/include/**"
         ],
         "defines": [],
         "compilerPath": "/usr/bin/gcc",

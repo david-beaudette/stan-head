@@ -7,16 +7,10 @@
   <maintainer email="beaudette.david@gmail.com">David Beaudette</maintainer>
   <license>MIT</license>
 
-  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>catkin</buildtool_depend>
 
-  <depend>rclcpp</depend>
-  <depend>std_msgs</depend> 
+  <depend>diagnostic_updater</depend>
   <depend>stan_common</depend> 
+  <depend>roscpp</depend>
   
-  <test_depend>ament_lint_auto</test_depend>
-  <test_depend>ament_lint_common</test_depend>
-
-  <export>
-    <build_type>ament_cmake</build_type>
-  </export>
 </package>

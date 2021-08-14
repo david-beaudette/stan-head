@@ -6,17 +6,17 @@
 #include <memory>
 #include <string>
 
-#include <diagnostic_updater/diagnostic_updater.hpp>
-#include <rclcpp/rclcpp.hpp>
-#include <std_msgs/msg/string.hpp>
-#include <std_msgs/msg/float32.hpp>
-#include <std_msgs/msg/u_int16.hpp>
+#include <diagnostic_updater/diagnostic_updater.h>
+#include "ros/ros.h"
+#include <std_msgs/String.h>
+#include <std_msgs/Float32.h>
+#include <std_msgs/UInt16.h>
 
 #include <stan_common/Head2Base.hpp>
 #include <stan_common/Base2Head.hpp>
 #include <stan_common/fletcher_impl.hpp>
 
-#include <stan_common/msg/stan_base_command.hpp>
+#include <stan_common/StanBaseCommand.h>
 
 #include <sermonizer/serialib.hpp>
 
