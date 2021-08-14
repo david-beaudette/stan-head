@@ -6,8 +6,8 @@
 #include <memory>
 #include <string>
 
-#include <diagnostic_updater/diagnostic_updater.h>
 #include "ros/ros.h"
+#include <diagnostic_updater/diagnostic_updater.h>
 #include <std_msgs/String.h>
 #include <std_msgs/Float32.h>
 #include <std_msgs/UInt16.h>
@@ -22,106 +22,57 @@
 
 #define SERIAL_BUF_LEN 1024
 
-using namespace std::chrono_literals; 
-using std::placeholders::_1;
+//using namespace std::chrono_literals; 
+//using std::placeholders::_1;
 
-class Sermonizer : public rclcpp::Node
+class Sermonizer
 {
 public:
-  Sermonizer()
-      : Node("sermonizer"), count_(0),
+  Sermonizer(const ros::NodeHandle &node_handle,
+            const ros::NodeHandle &private_node_handle)
+      : nh_(node_handle),
+        pnh_(private_node_handle),
+        count_(0),
         cmd_seq_prev_i_(255U),
         serial_buf_idx_next_(0U),
         crc_error_count_fast_ui32_(0U),
         crc_error_count_slow_ui32_(0U)
   {
-    string_pub_ = this->create_publisher<std_msgs::msg::String>("serial_pkt", 10);
-    pitch_cmd_pub_ = this->create_publisher<std_msgs::msg::Float32>("pitch_cmd", 10);
-    pitch_est_pub_ = this->create_publisher<std_msgs::msg::Float32>("pitch_est", 10);
-    speed_cmd_pub_ = this->create_publisher<std_msgs::msg::Float32>("speed_cmd", 10);
+    this->init();
+  }
+  void init() {
+    string_pub_ = pnh_.advertise<std_msgs::String>("/serial_pkt", 10);
+    pitch_cmd_pub_ = pnh_.advertise<std_msgs::Float32>("/pitch_cmd", 10);
+    pitch_est_pub_ = pnh_.advertise<std_msgs::Float32>("/pitch_est", 10);
+    speed_cmd_pub_ = pnh_.advertise<std_msgs::Float32>("/speed_cmd", 10);
+    
+    pitch_filt_gain_f32_ = 0.025f;
+    blink_period_f32_ = 0.5f;
+    pitch_filt_avg_len_f32_ = 1.0f;
+    serial_dev_ = std::string("/dev/ttyUSB0");
 
-    pitch_filt_gain_f32_ = this->declare_parameter("pitch_filt_gain",
-                                                   static_cast<double>(0.025));
-    blink_period_f32_ = this->declare_parameter("blink_period_f32",
-                                                static_cast<double>(0.5));
-    pitch_filt_avg_len_f32_ = this->declare_parameter("pitch_filt_avg_len_f32",
-                                                      static_cast<double>(1.0));
-    serial_dev_ = this->declare_parameter("dev", std::string("/dev/ttyUSB0"));
+    base_cmd_sub_ = pnh_.subscribe("/base_command",
+                                    50,
+                                    &Sermonizer::base_cmd_msg_cb,
+                                    this);
 
-    base_cmd_sub_ = this->create_subscription<stan_common::msg::StanBaseCommand>(
-        "base_command", 50, std::bind(&Sermonizer::base_cmd_msg_cb, this, _1));
-
-    diagnostic_ = std::make_shared<diagnostic_updater::Updater>(this);
-    diagnostic_->add("Stan Base Status", this, &Sermonizer::diagnostics);
-    diagnostic_->setHardwareID("arduino_nano_serial");
-    lastDiagTime_ = this->now().seconds();
-
-    auto par_cb =
-        [this](const std::vector<rclcpp::Parameter> &parameters)
-        -> rcl_interfaces::msg::SetParametersResult {
-      rcl_interfaces::msg::SetParametersResult result;
-      result.successful = false;
-      bool par_found = false;
-      for (const auto &parameter : parameters)
-      {
-        if (parameter.get_name() == "pitch_filt_gain")
-        {
-          par_found = true;
-          pitch_filt_gain_f32_ = static_cast<float>(parameter.as_double());
-          RCLCPP_INFO(this->get_logger(), "Pitch filter gain changed to %f.",
-                      pitch_filt_gain_f32_);
-          result.successful = this->SendBaseCommand(InitialiseFilter,
-                                                    pitch_filt_gain_f32_,
-                                                    pitch_filt_avg_len_f32_);
-        }
-        else if (parameter.get_name() == "pitch_filt_avg_len_f32")
-        {
-          par_found = true;
-          pitch_filt_avg_len_f32_ = static_cast<float>(parameter.as_double());
-          RCLCPP_INFO(this->get_logger(), "Pitch filter averaging length changed to %f.",
-                      pitch_filt_avg_len_f32_);
-          result.successful = this->SendBaseCommand(InitialiseFilter,
-                                                    pitch_filt_gain_f32_,
-                                                    pitch_filt_avg_len_f32_);
-        }
-        else if (parameter.get_name() == "blink_period_f32")
-        {
-          par_found = true;
-          blink_period_f32_ = static_cast<float>(parameter.as_double());
-          RCLCPP_INFO(this->get_logger(), "LED blink period changed to %f.",
-                      blink_period_f32_);
-          result.successful = this->SendBaseCommand(LedBlinkRate,
-                                                    blink_period_f32_,
-                                                    0.0f);
-        }
-      }
-      if (!result.successful)
-      {
-        if (par_found)
-        {
-          result.reason = "Unknown parameter";
-        }
-        else
-        {
-          result.reason = "Failed to send base command";
-        }
-      }
-      return result;
-    };
-    par_cb_hdl_ = this->add_on_set_parameters_callback(par_cb);
+    diagnostic_.add("Stan Base Status", this, &Sermonizer::diagnostics);
+    diagnostic_.setHardwareID("arduino_nano_serial");
+    lastDiagTime_ = ros::Time::now();
 
     char ser_open_err = serial_.openDevice(serial_dev_.c_str(), 115200);
     if (ser_open_err < 1)
     {
-      RCLCPP_ERROR(this->get_logger(), "Error opening serial port (error code %d)\n", (int)ser_open_err);
+      ROS_ERROR("Error opening serial port (error code %d)\n", (int)ser_open_err);
       opened_ = false;
     }
     else
     {
       serial_.flushReceiver();
 
-      timer_ = this->create_wall_timer(10ms,
-                                       std::bind(&Sermonizer::poll_serial, this));
+      timer_ = pnh_.createTimer(ros::Duration(0.01),
+                                &Sermonizer::poll_serial,
+                                this);
       opened_ = true;
     }
   }
@@ -131,9 +82,9 @@ public:
   }
 
 private:
-  void poll_serial()
+  void poll_serial(const ros::TimerEvent &event)
   {
-    auto message = std_msgs::msg::String();
+    auto message = std_msgs::String();
     int bytes_read = serial_.readBytes(&serial_buf_[serial_buf_idx_next_],
                                        SERIAL_BUF_LEN - serial_buf_idx_next_, 1, 50);
     bytes_read += serial_buf_idx_next_;
@@ -205,8 +156,8 @@ private:
                        std::to_string(bytes_read) +
                        "B";
       }
-      RCLCPP_DEBUG(this->get_logger(), "Publishing: '%s'", message.data.c_str());
-      string_pub_->publish(message);
+      ROS_DEBUG("Publishing: '%s'", message.data.c_str());
+      string_pub_.publish(message);
     }
   }
   /** @brief Move buffer bytes to start of buffer **/
@@ -254,15 +205,15 @@ private:
     else
     {
       memcpy(&fast_pkt_last_, buf, sizeof(Base2HeadFast));
-      auto pitch_cmd_msg = std_msgs::msg::Float32();
-      auto pitch_est_msg = std_msgs::msg::Float32();
-      auto speed_cmd_msg = std_msgs::msg::Float32();
+      auto pitch_cmd_msg = std_msgs::Float32();
+      auto pitch_est_msg = std_msgs::Float32();
+      auto speed_cmd_msg = std_msgs::Float32();
       pitch_cmd_msg.data = pkt->pitch_cmd;
       pitch_est_msg.data = pkt->pitch_est;
       speed_cmd_msg.data = pkt->speed_cmd[0];
-      pitch_cmd_pub_->publish(pitch_cmd_msg);
-      pitch_est_pub_->publish(pitch_est_msg);
-      speed_cmd_pub_->publish(speed_cmd_msg);
+      pitch_cmd_pub_.publish(pitch_cmd_msg);
+      pitch_est_pub_.publish(pitch_est_msg);
+      speed_cmd_pub_.publish(speed_cmd_msg);
       return true;
     }
   }
@@ -293,7 +244,7 @@ private:
   /** @brief Publishes diagnostics and status **/
   void diagnostics(diagnostic_updater::DiagnosticStatusWrapper &stat)
   {
-    double now = this->now().seconds();
+    ros::Time now = ros::Time::now();
     //double interval = now - lastDiagTime_;
     /*  byte OK=0
         byte WARN=1
@@ -325,7 +276,7 @@ private:
     lastDiagTime_ = now;
   }
 
-  void base_cmd_msg_cb(const stan_common::msg::StanBaseCommand::SharedPtr msg)
+  void base_cmd_msg_cb(const stan_common::StanBaseCommand::ConstPtr& msg)
   {
     this->SendBaseCommand(static_cast<Head2BaseCommandType>(msg->type),
                           msg->val1,
@@ -333,20 +284,25 @@ private:
     return;
   }
 
-  rclcpp::TimerBase::SharedPtr timer_;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr string_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pitch_cmd_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pitch_est_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr speed_cmd_pub_;
-  rclcpp::Subscription<stan_common::msg::StanBaseCommand>::SharedPtr base_cmd_sub_;
-  rclcpp::Node::OnSetParametersCallbackHandle::SharedPtr par_cb_hdl_;
+  // Public ros node handle
+  ros::NodeHandle nh_;
+  // Private ros node handle
+  ros::NodeHandle pnh_;
+  std::string node_name_{"sermonizer"};
 
-  std::shared_ptr<diagnostic_updater::Updater> diagnostic_;
+  ros::Timer timer_;
+  ros::Publisher string_pub_;
+  ros::Publisher pitch_cmd_pub_;
+  ros::Publisher pitch_est_pub_;
+  ros::Publisher speed_cmd_pub_;
+  ros::Subscriber base_cmd_sub_;
+ 
+  diagnostic_updater::Updater diagnostic_;
 
   size_t count_;
   std::string serial_dev_;
   bool opened_;
-  double lastDiagTime_;
+  ros::Time lastDiagTime_;
   serialib serial_;
   float pitch_filt_gain_f32_;
   float blink_period_f32_;
@@ -360,10 +316,12 @@ private:
   Base2HeadFast fast_pkt_last_;
 };
 
-int main(int argc, char *argv[])
-{
-  rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<Sermonizer>());
-  rclcpp::shutdown();
-  return 0;
+int main(int argc, char** argv) {
+  std::string node_name = "sermonizer";
+  ros::init(argc, argv, node_name);
+  ros::NodeHandle nh("");
+  ros::NodeHandle nh_private("~");
+  Sermonizer node(nh, nh_private);
+  ROS_INFO("Initialized serial port reading node sermonizer.");
+  ros::spin();
 }
