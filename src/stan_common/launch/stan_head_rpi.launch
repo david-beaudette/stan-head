@@ -1,17 +1,13 @@
-from launch import LaunchDescription
-from launch_ros.actions import Node
-
-def generate_launch_description():
-    return LaunchDescription([
-        Node(
-            package='sermonizer',
-            executable='sermonizer',
-            name='sermonizer',
-            arguments=['--ros-args', '--log-level', 'info']
-        ),
-        Node(
-            package='v4l2_camera',
-            executable='v4l2_camera_node',
-            name='stan_eye',
-        ),
-    ])
+<launch>
+  <node pkg="sermonizer" 
+        type="sermonizer" 
+        name="sermonizer" 
+        ns="sermonizer" 
+        args="--ros-args --log-level info" 
+  />
+  <!--node pkg="v4l2_camera" 
+        type="v4l2_camera_node" 
+        name="stan_eye" 
+        ns="stan_eye" 
+  /-->
+</launch>

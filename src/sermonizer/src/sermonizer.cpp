@@ -46,10 +46,10 @@ public:
     pitch_est_pub_ = pnh_.advertise<std_msgs::Float32>("/pitch_est", 10);
     speed_cmd_pub_ = pnh_.advertise<std_msgs::Float32>("/speed_cmd", 10);
     
-    pitch_filt_gain_f32_ = 0.025f;
-    blink_period_f32_ = 0.5f;
-    pitch_filt_avg_len_f32_ = 1.0f;
-    serial_dev_ = std::string("/dev/ttyUSB0");
+    pnh_.param<std::string>("serial_dev", serial_dev_, "/dev/ttyUSB0");
+    pnh_.param<float>("pitch_filt_gain_f32", pitch_filt_gain_f32_, 0.025f);
+    pnh_.param<float>("blink_period_f32", blink_period_f32_, 0.5f);
+    pnh_.param<float>("pitch_filt_avg_len_f32", pitch_filt_avg_len_f32_, 1.0f);
 
     base_cmd_sub_ = pnh_.subscribe("/base_command",
                                     50,

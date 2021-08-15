@@ -13,6 +13,8 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 add_message_files(
+  DIRECTORY 
+  msg
   FILES
   StanBaseCommand.msg
 )
@@ -27,6 +29,7 @@ catkin_package(
   include
   CATKIN_DEPENDS 
   message_runtime
+  std_msgs
 )
 
 add_library(${PROJECT_NAME} INTERFACE)
@@ -34,4 +37,9 @@ target_include_directories(${PROJECT_NAME} INTERFACE include)
 
 install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-  FILES_MATCHING PATTERN "*.hpp")
+  FILES_MATCHING PATTERN "*.hpp"
+)
+
+install(DIRECTORY launch/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+)

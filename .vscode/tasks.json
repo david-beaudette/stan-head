@@ -23,8 +23,8 @@
       "label": "clean",
       "detail": "Run the clean target",
       "type": "shell",
-      "command": "colcon build --cmake-target clean",
-      "problemMatcher": "$gcc",
+      "command": "catkin_make clean --source stan-head/src",
+      "problemMatcher": [],
       "options": {
         "cwd": "${workspaceFolder}/.."
       }
@@ -34,44 +34,18 @@
       "label": "purge",
       "detail": "Purge workspace by deleting all generated files.",
       "type": "shell",
-      "command": "rm -fr build install log; py3clean .",
+      "command": "rm -fr build devel install log; py3clean .",
       "problemMatcher": [],
       "options": {
         "cwd": "${workspaceFolder}/.."
       }
-    },
-    // C++ static analysis
-    {
-      "label": "cppcheck",
-      "detail": "Run static code checker cppcheck.",
-      "type": "shell",
-      "command": "ament_cppcheck src/",
-      "presentation": {
-        "panel": "dedicated",
-        "reveal": "silent",
-        "clear": true
-      },
-      "problemMatcher": [
-        {
-          "owner": "cppcheck",
-          "source": "cppcheck",
-          "pattern": [
-            {
-              "regexp": "^\\[(.+):(\\d+)\\]:\\s+(.+)$",
-              "file": 1,
-              "line": 2,
-              "message": 3
-            }
-          ]
-        }
-      ]
     },
     // Launch tasks
     {
       "label": "Launch UI",
       "detail": "Launches the ROS nodes to operate Stan from a desktop computer",
       "type": "shell",
-      "command": "source install/local_setup.sh; ros2 launch stan_common stan_head_desktop.launch",
+      "command": "source install/setup.sh; roslaunch stan_common stan_head_desktop.launch",
       "group": "none",
       "problemMatcher": "$gcc",
       "options": {
@@ -82,7 +56,7 @@
       "label": "Launch Head",
       "detail": "Launches the ROS nodes that run in Stan's head",
       "type": "shell",
-      "command": "source install/local_setup.sh; ros2 launch stan_common stan_head_rpi.launch",
+      "command": "source install/setup.sh; roslaunch stan_common stan_head_rpi.launch",
       "group": "none",
       "problemMatcher": "$gcc",
       "options": {

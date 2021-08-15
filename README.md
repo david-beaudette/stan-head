@@ -4,6 +4,9 @@ ROS nodes used for Stan's brain. Runs on Ubuntu 20.04 with ros Noetic.
 To build, install:
 - [ROS Noetic](http://wiki.ros.org/noetic/Installation/Ubuntu)
 
+- Add user to dialout (e.g. with user "david"):
+  sudo adduser david dialout
+
 - On the RPi only
 sudo nano /boot/firmware/config.txt
 At the end of the file, add:
