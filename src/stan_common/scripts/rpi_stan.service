@@ -1,0 +1,11 @@
+[Unit]
+Description=Stan head startup service for the RPi
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+ExecStart=/bin/bash /home/ubuntu/ros1_ws/install/share/stan_common/scripts/rpi_stan.sh
+
+[Install]
+WantedBy=multi-user.target

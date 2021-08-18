@@ -5,10 +5,10 @@
   <arg name="camera_frame_id" default="raspicam"/>
   <arg name="camera_name" default="camerav2_1280x720"/>
 
-  <machine name="stanhead" 
-           address="stanhead" 
+  <machine name="rpi" 
+           address="192.168.0.80" 
            user="ubuntu"
-           env-loader="~/ros1_ws/install/setup.sh"
+           env-loader="~/ros1_ws/install/share/stan_common/scripts/rpi_env.sh"
   />
 
   <node pkg="sermonizer" 
@@ -16,7 +16,7 @@
         name="sermonizer" 
         ns="sermonizer" 
         args="--ros-args --log-level info"
-        machine="stanhead">
+        machine="rpi">
 
     <param name="serial_dev" value="/dev/ttyUSB0" />
     <param name="pitch_filt_gain_f32" value="0.025" />
@@ -28,7 +28,7 @@
         pkg="raspicam_node" 
         name="raspicam_node" 
         output="screen"
-        machine="stanhead">
+        machine="rpi">
 
     <param name="private_topics" value="true"/>
 
@@ -50,6 +50,6 @@
         type="watcher_node" 
         name="wireless_watcher" 
         ns="wireless"
-        machine="stanhead"
+        machine="rpi"
   />
 </launch>
