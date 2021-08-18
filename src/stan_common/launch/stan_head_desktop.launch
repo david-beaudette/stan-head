@@ -3,20 +3,10 @@
         type="rqt_gui" 
         name="head_ui" 
   />
-  <!--node pkg="actionizer" 
+  <node pkg="actionizer" 
         type="joy_actionizer" 
         name="joy_actionizer" 
-  /-->
-  <node pkg="sermonizer" 
-        type="sermonizer" 
-        name="sermonizer" 
-        ns="sermonizer" 
-        args="--ros-args --log-level info">
-    <param name="serial_dev" value="/dev/ttyUSB0" />
-    <param name="pitch_filt_gain_f32" value="0.025" />
-    <param name="blink_period_f32" value="0.5" />
-    <param name="pitch_filt_avg_len_f32" value="1.0" />
-  </node>
+  />
   <node pkg="joy" 
         type="joy_node" 
         name="joystick_receiver">
