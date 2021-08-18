@@ -8,6 +8,7 @@
 
 #include "ros/ros.h"
 #include <diagnostic_updater/diagnostic_updater.h>
+#include <diagnostic_updater/publisher.h>
 #include <std_msgs/String.h>
 #include <std_msgs/Float32.h>
 #include <std_msgs/UInt16.h>
@@ -56,8 +57,8 @@ public:
                                     &Sermonizer::base_cmd_msg_cb,
                                     this);
 
-    diagnostic_.add("Stan Base Status", this, &Sermonizer::diagnostics);
     diagnostic_.setHardwareID("arduino_nano_serial");
+    diagnostic_.add("Stan Base Status", this, &Sermonizer::diagnostics);
     lastDiagTime_ = ros::Time::now();
 
     char ser_open_err = serial_.openDevice(serial_dev_.c_str(), 115200);
@@ -273,6 +274,7 @@ private:
     stat.add("slow packet parsing error count", crc_error_count_slow_ui32_);
     stat.add("slow packet size", (int)sizeof(Base2HeadSlow));
     stat.add("device", serial_dev_);
+    diagnostic_.update();
     lastDiagTime_ = now;
   }
 
