@@ -1,42 +1,36 @@
 cmake_minimum_required(VERSION 3.5)
 project(actionizer)
 
-# Default to C++14
-if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 14)
-endif()
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
-endif()
+set(DEPENDENCIES
+  roscpp
+  std_msgs
+  sensor_msgs
+  stan_common
+)
 
-# find dependencies
-find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(std_msgs REQUIRED)
-find_package(sensor_msgs REQUIRED)
-find_package(stan_common REQUIRED)
+find_package(catkin REQUIRED COMPONENTS
+  ${DEPENDENCIES}
+)
 
 include_directories(
-  include/actionizer
-  ${CMAKE_CURRENT_SOURCE_DIR}/../../install/include
+  ${catkin_INCLUDE_DIRS}
+)
+
+catkin_package(
+  LIBRARIES ${PROJECT_NAME}
+  CATKIN_DEPENDS ${DEPENDENCIES}
 )
 
 add_executable(joy_actionizer src/joy_actionizer.cpp)
-
-ament_target_dependencies(joy_actionizer 
-  "rclcpp"
-  "std_msgs"
-  "sensor_msgs"
-  "stan_common"
-)
-
-target_include_directories(joy_actionizer PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>
-)
+target_link_libraries(joy_actionizer ${catkin_LIBRARIES})
+add_dependencies(joy_actionizer stan_common_generate_messages_cpp)
 
 install(TARGETS joy_actionizer
-  DESTINATION lib/${PROJECT_NAME})
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
-ament_package()

@@ -29,7 +29,7 @@ class Sermonizer
 {
 public:
   Sermonizer(const ros::NodeHandle &node_handle,
-            const ros::NodeHandle &private_node_handle)
+             const ros::NodeHandle &private_node_handle)
       : nh_(node_handle),
         pnh_(private_node_handle),
         count_(0),

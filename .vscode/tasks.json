@@ -8,14 +8,14 @@
       "label": "build",
       "detail": "Build workspace (default)",
       "type": "shell",
-      "command": "catkin_make install --source stan-head/src",
+      "command": "catkin_make install --source src/stan-head/src",
       "group": {
         "kind": "build",
         "isDefault": true
       },
       "problemMatcher": "$gcc",
       "options": {
-        "cwd": "${workspaceFolder}/.."
+        "cwd": "${workspaceFolder}/../.."
       }
     },
     // Clean
@@ -23,10 +23,10 @@
       "label": "clean",
       "detail": "Run the clean target",
       "type": "shell",
-      "command": "catkin_make clean --source stan-head/src",
+      "command": "catkin_make clean --source src/stan-head/src",
       "problemMatcher": [],
       "options": {
-        "cwd": "${workspaceFolder}/.."
+        "cwd": "${workspaceFolder}/../.."
       }
     },
     // Purge
@@ -37,7 +37,7 @@
       "command": "rm -fr build devel install log; py3clean .",
       "problemMatcher": [],
       "options": {
-        "cwd": "${workspaceFolder}/.."
+        "cwd": "${workspaceFolder}/../.."
       }
     },
     // Launch tasks
@@ -49,7 +49,7 @@
       "group": "none",
       "problemMatcher": "$gcc",
       "options": {
-        "cwd": "${workspaceFolder}/.."
+        "cwd": "${workspaceFolder}/../.."
       }
     },
     {
@@ -60,7 +60,7 @@
       "group": "none",
       "problemMatcher": "$gcc",
       "options": {
-        "cwd": "${workspaceFolder}/.."
+        "cwd": "${workspaceFolder}/../.."
       }
     },
   ],
