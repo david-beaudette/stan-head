@@ -1,11 +1,23 @@
 [Unit]
 Description=Stan head startup service for the RPi
-After=network.target
+Requires=roscore.service
+PartOf=roscore.service
+After=network.target time-sync.target roscore.service
 
 [Service]
 Type=simple
 User=ubuntu
-ExecStart=/bin/bash /home/ubuntu/ros1_ws/install/share/stan_common/scripts/rpi_stan.sh
+ExecStart=/bin/bash -c '/home/ubuntu/ros1_ws/install/share/stan_common/scripts/rpi_stan.sh'
 
+[Install]
+WantedBy=multi-user.target
+
+Requires=roscore.service
+PartOf=roscore.service
+After=NetworkManager.service time-sync.target roscore.service
+[Service]
+Type=simple
+User=[TODO enter user name here]
+ExecStart=/usr/sbin/roslaunch
 [Install]
 WantedBy=multi-user.target
