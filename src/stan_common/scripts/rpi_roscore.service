@@ -12,7 +12,7 @@ User=ubuntu
 # ‘started’ until the original process exits, so we have the
 # non-forked shell wait until it can connect to the tcp opened by
 # roscore, and then exit, preventing conflicts with dependant services
-ExecStart=/bin/sh -c '. /opt/ros/noetic/setup.sh; . /home/ubuntu/ros1_ws/install/share/stan_common/scripts/rpi_env.sh; roscore & while ! echo exit | nc localhost 11311 > /dev/null; do sleep 1; done'
+ExecStart=/bin/sh -c '. /opt/ros/noetic/setup.sh; roscore & while ! echo exit | nc localhost 11311 > /dev/null; do sleep 1; done'
 
 [Install]
 WantedBy=multi-user.target
