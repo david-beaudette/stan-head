@@ -1,0 +1,15 @@
+<library path="src">
+  <class name="Stan UI Plugin" type="stan_ui.stan_ui_module.StanUiPlugin" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      Provides a user interface for Stan as an rqt plugin.
+    </description>
+    <qtgui>
+      <group>
+        <label>Visualization</label>
+      </group>
+      <label>Stan User Interface</label>
+      <icon type="theme">media-playback-start</icon>
+      <statustip>Contains tools to interact with Stan.</statustip>
+    </qtgui>
+  </class>
+</library>
