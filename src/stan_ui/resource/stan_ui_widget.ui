@@ -14,15 +14,15 @@
    <string>StanUi</string>
   </property>
   <property name="windowIcon">
-   <iconset theme="media-playback-start"/>
+   <iconset theme="face-cool"/>
   </property>
   <widget class="QPushButton" name="StartMotorButton">
    <property name="geometry">
     <rect>
-     <x>120</x>
-     <y>70</y>
-     <width>98</width>
-     <height>27</height>
+     <x>10</x>
+     <y>10</y>
+     <width>100</width>
+     <height>30</height>
     </rect>
    </property>
    <property name="text">
