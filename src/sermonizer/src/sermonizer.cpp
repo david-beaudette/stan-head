@@ -59,6 +59,7 @@ public:
 
     diagnostic_.setHardwareID("arduino_nano_serial");
     diagnostic_.add("Stan Base Status", this, &Sermonizer::diagnostics);
+    
     lastDiagTime_ = ros::Time::now();
 
     char ser_open_err = serial_.openDevice(serial_dev_.c_str(), 115200);
@@ -160,6 +161,7 @@ private:
       ROS_DEBUG("Publishing: '%s'", message.data.c_str());
       string_pub_.publish(message);
     }
+    diagnostic_.update();
   }
   /** @brief Move buffer bytes to start of buffer **/
   void BufferFall(uint8_t *bottom, const uint8_t *top, size_t len)
@@ -274,7 +276,6 @@ private:
     stat.add("slow packet parsing error count", crc_error_count_slow_ui32_);
     stat.add("slow packet size", (int)sizeof(Base2HeadSlow));
     stat.add("device", serial_dev_);
-    diagnostic_.update();
     lastDiagTime_ = now;
   }
 
