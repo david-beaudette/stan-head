@@ -42,5 +42,9 @@ To build, install the full desktop version of ROS:
   -> eventually: sudo systemctl enable rpi_stan
   sudo systemctl start rpi_roscore
   -> eventually: sudo systemctl start rpi_stan
+
+- Install post-processing tools
+  sudo apt install octave
+  sudo apt install octave-dataframe octave-htmldoc
   
   

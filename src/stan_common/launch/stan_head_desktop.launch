@@ -1,5 +1,6 @@
 <launch>
   <arg name="local_arduino" default="false"/>
+  <arg name="log_outputs" default="true"/>
 
   <node pkg="rqt_gui" 
         type="rqt_gui" 
@@ -18,8 +19,8 @@
     <param name="deadzone" value="0.05" />
     <param name="coalesce_interval" value="0.05" />
     <param name="pub_diagnostics" value="False" />
-
   </node>
+
   <node pkg="sermonizer" 
         type="sermonizer" 
         name="sermonizer" 
@@ -31,5 +32,12 @@
     <param name="pitch_filt_gain_f32" value="0.025" />
     <param name="blink_period_f32" value="0.5" />
     <param name="pitch_filt_avg_len_f32" value="1.0" />
+  </node>
+
+  <node pkg="rosbag" 
+        type="record" 
+        name="log_node" 
+        args="-a -O /home/david/ros1_ws/logs/stan_logs.bag"
+        if="$(arg log_outputs)">
   </node>
 </launch>
